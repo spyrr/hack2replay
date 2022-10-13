@@ -1,0 +1,112 @@
+version: 1
+
+settings:
+  mode: dev # prod
+  http:
+    header:
+      Pentester: Tester1 (Remediation check)
+      User-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36
+    proxies:
+      http: http://127.0.0.1:8080
+      https: http://127.0.0.1:8080
+      socks: http://127.0.0.1:8080
+login:
+  profiles:
+    juiceshop-user:
+      url: http://[::1]:11111/rest/user/login
+      method: POST
+      basic: False
+      params:
+        type: json
+        data:
+          email: a@b.com
+          password: abc123
+      success:
+        code: 200
+        then:
+          - read:
+              name: token
+              type: json
+              where: body
+              getter: "['authentication']['token']"
+            write:
+              type: json
+              where: header
+              data:
+                Cookie: token=$token$
+                Authorization: Bearer $token$
+vuls:
+  - id: 2022-H-0001
+    host: localhost
+    service_type: web
+    title: Test - Method - GET
+    desc: Secure configuration is needed
+    attack:
+      url: http://[::1]:11111/vul.html
+      method: GET
+      params: 
+        type: params
+        data: 
+          a: 1
+          b: 2
+          c: 3
+      header:
+        User-agent: test
+      login: juiceshop-user
+    check:
+      match:
+        header:
+          - name: Server
+            value: Apache-Coyote/1.1
+  - id: 2022-H-0002
+    host: localhost2
+    service_type: web
+    title: Test - Method - gd (error)
+    desc: Malformed HTTP method
+    attack:
+      url: http://[::1]:11111/vul.html
+      method: gd
+    check:
+      match:
+        body:
+          - Apache Tomcat/6.0.53
+    report:
+      highlight:
+        - name: method
+          value: gd
+  - id: 2022-H-0003
+    host: localhost2
+    service_type: web
+    title: Test - Method - POST - PARAM - data (form)
+    desc: Malformed HTTP method
+    attack:
+      url: http://[::1]:11111/vul.html
+      method: POST
+      params: 
+        type: data
+        data: 
+          a: 1
+          b: 2
+          c: 3
+    check:
+      match:
+        body:
+          - Apache Tomcat/6.0.53
+  - id: 2022-H-0004
+    host: 192.168.0.1
+    service_type: web
+    title: Test - Method - POST - PARAM - json
+    desc: Malformed HTTP method
+    attack:
+      url: http://[::1]:11111/vul.html
+      method: POST
+      params: 
+        type: json
+        data: 
+          a: 1
+          b: 2
+          c: 3
+    check:
+      match:
+        body:
+          - Apache Tomcat/6.0.53
